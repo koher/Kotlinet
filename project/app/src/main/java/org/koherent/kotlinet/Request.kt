@@ -10,7 +10,7 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.concurrent.thread
 
-public class Request(val method: Method, val urlString: String, val parameters: Map<String, Object>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
+public class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
     private var completed: Boolean = false
 
     private var urlOrNull: URL? = null
@@ -33,7 +33,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                         "?"
                     } else {
                         "&"
-                    } + URLEncoder.encode(entry.getKey(), "UTF-8") + "=" + URLEncoder.encode(entry.getValue().toString())
+                    } + URLEncoder.encode(entry.getKey(), Charsets.UTF_8.name()) + "=" + URLEncoder.encode(entry.getValue().toString(), Charsets.UTF_8.name())
                 } ?: ""
             }
 
@@ -52,16 +52,18 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                 throw IOException("Unsupported URL connection: " + urlConnection.javaClass.name)
             }
 
-            urlConnection.setRequestMethod(method.rawValue)
+            urlConnection.requestMethod = method.rawValue
 
             headers?.entrySet()?.forEach { urlConnection.setRequestProperty(it.getKey(), it.getValue()) }
 
             when (method) {
                 Method.POST -> {
                     urlConnection.doOutput = true
-                    BufferedWriter(OutputStreamWriter(urlConnection.getOutputStream(), "UTF-8")).use {
+                    BufferedWriter(OutputStreamWriter(urlConnection.outputStream, "UTF-8")).use {
                         it.write(parametersString)
                     }
+                }
+                else -> {
                 }
             }
 
@@ -182,7 +184,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         completionHandlers.forEach { callCompletionHandler(it) }
     }
 
-    Synchronized private fun complete(handler: Handler?) {
+    @Synchronized private fun complete(handler: Handler?) {
         if (handler != null) {
             handler.post {
                 callCompletionHandlers()
@@ -198,7 +200,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
     public fun responseString(charset: Charset? = null, completionHandler: (URL?, URLConnection?, Result<String>) -> Unit): Request {
         return response { url, urlConnection, bytes, exception ->
-            bytes?.let { String(it, charset ?: Charsets.UTF_8) }?.let { Result.Success<String>(it) } ?: Result.Failure(bytes, exception!!)
+            val result = bytes?.let { String(it, charset ?: Charsets.UTF_8) }?.let { Result.Success(it) } ?: Result.Failure<String>(bytes, exception!!)
+            completionHandler(url, urlConnection, result)
         }
     }
 }
