@@ -7,14 +7,21 @@ import java.net.URL
 import java.net.URLConnection
 import java.net.URLEncoder
 import java.nio.charset.Charset
+import java.util.*
 import kotlin.concurrent.thread
 
 public class Request(val method: Method, val urlString: String, val parameters: Map<String, Object>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
-    public fun response(completionHandler: (URL?, URLConnection?, ByteArray?, Exception?) -> Unit): Request {
-        var urlOrNull: URL? = null
-        var urlConnectionOrNull: URLConnection? = null
-        try {
+    private var completed: Boolean = false
 
+    private var urlOrNull: URL? = null
+    private var urlConnectionOrNull: URLConnection? = null
+    private var bytes: ByteArray? = null
+    private var exception: Exception? = null
+
+    private var completionHandlers: MutableList<(URL?, URLConnection?, ByteArray?, Exception?) -> Unit> = ArrayList()
+
+    init {
+        try {
             val parametersString = when (encoding) {
                 ParameterEncoding.URL -> parameters?.entrySet()?.fold("") { result, entry ->
                     result + if (result.length() == 0) {
@@ -58,20 +65,40 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                 try {
                     urlConnection.connect()
                     val out = ByteArrayOutputStream()
-                    val bytes: ByteArray = BufferedInputStream(urlConnection.inputStream).use {
+                    bytes = BufferedInputStream(urlConnection.inputStream).use {
                         it.readBytes()
                     }
-
-                    handler.post { completionHandler(url, urlConnection, bytes, null) }
+                    complete()
                 } catch(e: Exception) {
-                    handler.post { completionHandler(url, urlConnection, null, e) }
+                    exception = e
+                    complete()
                 }
             }
         } catch(e: Exception) {
-            completionHandler(urlOrNull, urlConnectionOrNull, null, e)
+            exception = e
+            complete()
         }
+    }
 
+    public fun response(completionHandler: (URL?, URLConnection?, ByteArray?, Exception?) -> Unit): Request {
+        synchronized(this) {
+            if (completed) {
+                callCompletionHandler(completionHandler)
+            } else {
+                completionHandlers.add(completionHandler)
+            }
+        }
         return this
+    }
+
+    private fun callCompletionHandler(completionHandler: (URL?, URLConnection?, ByteArray?, Exception?) -> Unit) {
+        completionHandler(urlOrNull, urlConnectionOrNull, bytes, exception)
+    }
+
+    Synchronized private fun complete() {
+        completionHandlers.forEach { callCompletionHandler(it) }
+        completionHandlers.clear()
+        completed = true
     }
 
     public fun responseString(charset: Charset? = null, completionHandler: (URL?, URLConnection?, Result<String>) -> Unit): Request {
