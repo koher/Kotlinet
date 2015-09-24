@@ -53,14 +53,19 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                 }
             }
 
+            val handler = Handler()
             thread {
-                urlConnection.connect()
-                val out = ByteArrayOutputStream()
-                val bytes: ByteArray = BufferedInputStream(urlConnection.inputStream).use {
-                    it.readBytes()
-                }
+                try {
+                    urlConnection.connect()
+                    val out = ByteArrayOutputStream()
+                    val bytes: ByteArray = BufferedInputStream(urlConnection.inputStream).use {
+                        it.readBytes()
+                    }
 
-                Handler().post { completionHandler(url, urlConnection, bytes, null) }
+                    handler.post { completionHandler(url, urlConnection, bytes, null) }
+                } catch(e: Exception) {
+                    handler.post { completionHandler(url, urlConnection, null, e) }
+                }
             }
         } catch(e: Exception) {
             completionHandler(urlOrNull, urlConnectionOrNull, null, e)
