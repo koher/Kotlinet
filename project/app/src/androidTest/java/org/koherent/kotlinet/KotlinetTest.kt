@@ -1,9 +1,13 @@
 package org.koherent.kotlinet
 
 import android.test.ActivityInstrumentationTestCase2
+import android.test.RenamingDelegatingContext
+import java.io.File
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivity::class.java) {
@@ -34,5 +38,44 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
         } else {
             fail()
         }
+    }
+
+    public fun testDownload() {
+        val context = RenamingDelegatingContext(activity, "__kotlinet__")
+
+        val signal = CountDownLatch(1)
+
+        val destination = File(context.filesDir, "master.zip")
+        destination.delete()
+
+        var result: ByteArray? = null
+
+        runTestOnUiThread {
+            try {
+                download(Method.GET, "https://github.com/koher/Kotlinet/archive/master.zip", destination).response { url, urlConnection, bytes, exception ->
+                    result = bytes
+                    signal.countDown()
+                }
+            } catch(e: Exception) {
+                signal.countDown()
+            }
+        }
+
+        try {
+            signal.await(30L, TimeUnit.SECONDS)
+        } catch(e: InterruptedException) {
+            destination.delete()
+            fail(e.getMessage())
+            e.printStackTrace()
+        }
+
+        if (result != null) {
+            assertTrue(Arrays.equals(result, destination.readBytes()))
+
+        } else {
+            fail()
+        }
+
+        destination.delete()
     }
 }

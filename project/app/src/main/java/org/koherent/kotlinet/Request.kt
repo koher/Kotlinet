@@ -13,13 +13,13 @@ import kotlin.concurrent.thread
 public class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
     private var completed: Boolean = false
 
-    private var urlOrNull: URL? = null
-    private var urlConnectionOrNull: URLConnection? = null
+    private var url: URL? = null
+    private var urlConnection: URLConnection? = null
     private var bytes: ByteArray? = null
     private var exception: Exception? = null
 
-    private var totalBytesWritten: Long = 0L
-    private var totalBytesExpectedToWrite: Long = -1L
+    private var totalBytesRead: Long = 0L
+    private var totalBytesExpectedToRead: Long = -1L
 
     private var progressHandlers: MutableList<(Long, Long, Long) -> Unit> = ArrayList()
     private var streamHandlers: MutableList<(ByteArray) -> Unit> = ArrayList()
@@ -43,12 +43,12 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             }
 
             val url = URL(urlStringWithParameters)
-            urlOrNull = url
+            this.url = url
 
             val urlConnection = url.openConnection()
-            urlConnectionOrNull = urlConnection
+            this.urlConnection = urlConnection
 
-            if (!(urlConnection is HttpURLConnection)) {
+            if (urlConnection !is HttpURLConnection) {
                 throw IOException("Unsupported URL connection: " + urlConnection.javaClass.name)
             }
 
@@ -73,15 +73,15 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     urlConnection.connect()
 
                     try {
-                        totalBytesExpectedToWrite = urlConnection.getHeaderField("Content-Length").toLong()
+                        totalBytesExpectedToRead = urlConnection.getHeaderField("Content-Length").toLong()
                     } catch(e: NumberFormatException) {
                     }
 
                     val out = ByteArrayOutputStream()
-                    val bufferLength = Math.min(0x10000, if (totalBytesExpectedToWrite < 0L || totalBytesExpectedToWrite > Int.MAX_VALUE) {
+                    val bufferLength = Math.min(0x10000, if (totalBytesExpectedToRead < 0L || totalBytesExpectedToRead > Int.MAX_VALUE) {
                         Int.MAX_VALUE
                     } else {
-                        totalBytesExpectedToWrite.toInt()
+                        totalBytesExpectedToRead.toInt()
                     }) // to prevent unnecessary copies for the stream handlers
                     BufferedInputStream(urlConnection.inputStream, bufferLength).use {
                         val buffer = ByteArray(bufferLength)
@@ -95,7 +95,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                                 break
                             }
 
-                            totalBytesWritten += length
+                            totalBytesRead += length
 
                             out.write(buffer, 0, length)
 
@@ -160,8 +160,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         return this
     }
 
-    private fun callProgressHandler(progressHandler: (Long, Long, Long) -> Unit, bytesWritten: Long) {
-        progressHandler(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite)
+    private fun callProgressHandler(progressHandler: (Long, Long, Long) -> Unit, bytesRead: Long) {
+        progressHandler(bytesRead, totalBytesRead, totalBytesExpectedToRead)
     }
 
     private fun callProgressHandlers(bytesWritten: Long) {
@@ -177,7 +177,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     }
 
     private fun callCompletionHandler(completionHandler: (URL?, URLConnection?, ByteArray?, Exception?) -> Unit) {
-        completionHandler(urlOrNull, urlConnectionOrNull, bytes, exception)
+        completionHandler(url, urlConnection, bytes, exception)
     }
 
     private fun callCompletionHandlers() {
