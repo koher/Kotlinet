@@ -69,13 +69,21 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
             e.printStackTrace()
         }
 
-        if (result != null) {
-            assertTrue(Arrays.equals(result, destination.readBytes()))
-
+        val bytes = result
+        if (bytes != null) {
+            assertBytes(bytes, destination.readBytes())
         } else {
             fail()
         }
 
         destination.delete()
+    }
+
+    private fun assertBytes(expected: ByteArray, actual: ByteArray) {
+        assertEquals(expected.size(), actual.size(), "Different size")
+
+        for (i in 0..(Math.min(expected.size(), actual.size()) - 1)) {
+            assertEquals(expected[i], actual[i], "At <$i> / <${expected.size()}>")
+        }
     }
 }

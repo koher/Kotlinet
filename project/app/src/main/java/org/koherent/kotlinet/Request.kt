@@ -25,6 +25,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     private var streamHandlers: MutableList<(ByteArray) -> Unit> = ArrayList()
     private var completionHandlers: MutableList<(URL?, URLConnection?, ByteArray?, Exception?) -> Unit> = ArrayList()
 
+    private val out: ByteArrayOutputStream = ByteArrayOutputStream()
+
     init {
         try {
             val parametersString = when (encoding) {
@@ -77,20 +79,21 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     } catch(e: NumberFormatException) {
                     }
 
-                    val out = ByteArrayOutputStream()
                     val bufferLength = Math.min(0x10000, if (totalBytesExpectedToRead < 0L || totalBytesExpectedToRead > Int.MAX_VALUE) {
                         Int.MAX_VALUE
                     } else {
                         totalBytesExpectedToRead.toInt()
-                    }) // to prevent unnecessary copies for the stream handlers
+                    })
                     BufferedInputStream(urlConnection.inputStream, bufferLength).use {
                         val buffer = ByteArray(bufferLength)
                         while (true) {
                             val length = it.read(buffer)
                             if (length == -1) {
-                                synchronized(this) {
-                                    callProgressHandlers(0L)
-                                    callStreamHandlers(ByteArray(0))
+                                handler.post {
+                                    synchronized(this) {
+                                        callProgressHandlers(0L, totalBytesRead)
+                                        callStreamHandlers(ByteArray(0))
+                                    }
                                 }
                                 break
                             }
@@ -99,27 +102,28 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
                             out.write(buffer, 0, length)
 
-                            synchronized(this) {
-                                callProgressHandlers(length.toLong())
-                                callStreamHandlers(if (length == buffer.size()) {
-                                    buffer
-                                } else {
-                                    buffer.copyOf(length)
-                                })
+                            val readBytes = buffer.copyOf(length)
+                            val totalBytesRead = this.totalBytesRead // this.totalBytesRead can be changed because of multithreading
+                            handler.post {
+                                synchronized(this) {
+                                    callProgressHandlers(length.toLong(), totalBytesRead)
+                                    callStreamHandlers(readBytes)
+                                }
                             }
                         }
                     }
                     bytes = out.toByteArray()
-
-                    complete(handler)
                 } catch(e: Exception) {
                     exception = e
-                    complete(handler)
+                } finally {
+                    handler.post {
+                        complete()
+                    }
                 }
             }
         } catch(e: Exception) {
             exception = e
-            complete(null)
+            complete()
         }
     }
 
@@ -127,8 +131,11 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         if (progressHandler != null) {
             synchronized(this) {
                 if (completed) {
-                    callProgressHandler(progressHandler, 0L)
+                    callProgressHandler(progressHandler, totalBytesRead, totalBytesRead)
                 } else {
+                    if (totalBytesRead > 0) {
+                        callProgressHandler(progressHandler, totalBytesRead, totalBytesRead)
+                    }
                     progressHandlers.add(progressHandler)
                 }
             }
@@ -140,8 +147,11 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         if (streamHandler != null) {
             synchronized(this) {
                 if (completed) {
-                    callStreamHandler(streamHandler, ByteArray(0))
+                    callStreamHandler(streamHandler, bytes!!)
                 } else {
+                    if (totalBytesRead > 0) {
+                        callStreamHandler(streamHandler, out.toByteArray())
+                    }
                     streamHandlers.add(streamHandler)
                 }
             }
@@ -160,12 +170,12 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         return this
     }
 
-    private fun callProgressHandler(progressHandler: (Long, Long, Long) -> Unit, bytesRead: Long) {
+    private fun callProgressHandler(progressHandler: (Long, Long, Long) -> Unit, bytesRead: Long, totalBytesRead: Long) {
         progressHandler(bytesRead, totalBytesRead, totalBytesExpectedToRead)
     }
 
-    private fun callProgressHandlers(bytesWritten: Long) {
-        progressHandlers.forEach { callProgressHandler(it, bytesWritten) }
+    private fun callProgressHandlers(bytesRead: Long, totalBytesRead: Long) {
+        progressHandlers.forEach { callProgressHandler(it, bytesRead, totalBytesRead) }
     }
 
     private fun callStreamHandler(streamHandler: (ByteArray) -> Unit, readBytes: ByteArray) {
@@ -180,18 +190,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         completionHandler(url, urlConnection, bytes, exception)
     }
 
-    private fun callCompletionHandlers() {
+    @Synchronized private fun complete() {
         completionHandlers.forEach { callCompletionHandler(it) }
-    }
-
-    @Synchronized private fun complete(handler: Handler?) {
-        if (handler != null) {
-            handler.post {
-                callCompletionHandlers()
-            }
-        } else {
-            callCompletionHandlers()
-        }
         progressHandlers.clear()
         streamHandlers.clear()
         completionHandlers.clear()
