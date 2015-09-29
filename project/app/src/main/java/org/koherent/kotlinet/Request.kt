@@ -14,7 +14,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     private var completed: Boolean = false
 
     private var url: URL? = null
-    private var urlConnection: URLConnection? = null
+    private var urlConnection: HttpURLConnection? = null
     private var bytes: ByteArray? = null
     private var exception: Exception? = null
 
@@ -23,7 +23,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
     private var progressHandlers: MutableList<(Long, Long, Long) -> Unit> = ArrayList()
     private var streamHandlers: MutableList<(ByteArray) -> Unit> = ArrayList()
-    private var completionHandlers: MutableList<(URL?, URLConnection?, ByteArray?, Exception?) -> Unit> = ArrayList()
+    private var completionHandlers: MutableList<(URL?, HttpURLConnection?, ByteArray?, Exception?) -> Unit> = ArrayList()
 
     private val out: ByteArrayOutputStream = ByteArrayOutputStream()
 
@@ -48,11 +48,11 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             this.url = url
 
             val urlConnection = url.openConnection()
-            this.urlConnection = urlConnection
 
             if (urlConnection !is HttpURLConnection) {
                 throw IOException("Unsupported URL connection: " + urlConnection.javaClass.name)
             }
+            this.urlConnection = urlConnection
 
             urlConnection.requestMethod = method.rawValue
 
@@ -159,7 +159,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         return this
     }
 
-    public fun response(completionHandler: (URL?, URLConnection?, ByteArray?, Exception?) -> Unit): Request {
+    public fun response(completionHandler: (URL?, HttpURLConnection?, ByteArray?, Exception?) -> Unit): Request {
         synchronized(this) {
             if (completed) {
                 callCompletionHandler(completionHandler)
@@ -186,7 +186,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         streamHandlers.forEach { callStreamHandler(it, readBytes) }
     }
 
-    private fun callCompletionHandler(completionHandler: (URL?, URLConnection?, ByteArray?, Exception?) -> Unit) {
+    private fun callCompletionHandler(completionHandler: (URL?, HttpURLConnection?, ByteArray?, Exception?) -> Unit) {
         completionHandler(url, urlConnection, bytes, exception)
     }
 
@@ -198,7 +198,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         completed = true
     }
 
-    public fun responseString(charset: Charset? = null, completionHandler: (URL?, URLConnection?, Result<String>) -> Unit): Request {
+    public fun responseString(charset: Charset? = null, completionHandler: (URL?, HttpURLConnection?, Result<String>) -> Unit): Request {
         return response { url, urlConnection, bytes, exception ->
             val result = bytes?.let { String(it, charset ?: Charsets.UTF_8) }?.let { Result.Success(it) } ?: Result.Failure<String>(bytes, exception!!)
             completionHandler(url, urlConnection, result)
