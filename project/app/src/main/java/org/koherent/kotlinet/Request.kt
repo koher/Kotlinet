@@ -204,4 +204,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             completionHandler(url, urlConnection, result)
         }
     }
+
+    public fun cancel() {
+        urlConnection?.disconnect()
+    }
 }

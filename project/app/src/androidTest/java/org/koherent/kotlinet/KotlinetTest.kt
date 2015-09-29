@@ -7,6 +7,7 @@ import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -33,11 +34,7 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
             e.printStackTrace()
         }
 
-        if (result != null) {
-            assertEquals("ABCDEFG\n", result)
-        } else {
-            fail()
-        }
+        assertEquals("ABCDEFG\n", result)
     }
 
     public fun testDownload() {
@@ -77,6 +74,28 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
         }
 
         destination.delete()
+    }
+
+    public fun testCancel(){
+        val signal = CountDownLatch(1)
+
+        var result: ByteArray? = null
+
+        runTestOnUiThread {
+            request(Method.GET, "https://github.com/android/platform_frameworks_base/archive/master.zip").response { url, urlConnection, bytes, exception ->
+                result = bytes
+                signal.countDown()
+            }.cancel()
+        }
+
+        try {
+            signal.await(5L, TimeUnit.SECONDS)
+        } catch(e: InterruptedException) {
+            fail(e.getMessage())
+            e.printStackTrace()
+        }
+
+        assertNull(result)
     }
 
     private fun assertBytes(expected: ByteArray, actual: ByteArray) {
