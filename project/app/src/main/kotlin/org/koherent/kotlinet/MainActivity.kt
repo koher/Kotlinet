@@ -4,13 +4,44 @@ import android.support.v7.app.ActionBarActivity
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.ProgressBar
+import java.io.File
 
 
 public class MainActivity : ActionBarActivity() {
 
+    var request: Request? = null
+
+    var progress: ProgressBar? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val p = findViewById(R.id.progress)
+        if(p is ProgressBar) {
+            progress = p
+        }
+
+        findViewById(R.id.download).setOnClickListener {
+            println("start downloading")
+            this.request = download(Method.GET, "http://circos.ca/guide/visual/img/circos-visualguide-med.png", File.createTempFile("prf","sf"))
+            .progress { bytes, totalBytes, totalBytesExpectedToRead ->
+                this.progress!!.max = totalBytesExpectedToRead.toInt()
+                this.progress!!.progress = totalBytes.toInt()
+                println("progress: ${this.progress!!.progress}/${this.progress!!.max}")
+            }.response { url, httpURLConnection, bytes, exception ->
+                println("finished")
+                println("StatusCode: ${httpURLConnection?.responseCode}")
+                println("error: ${exception}")
+            }
+        }
+
+        findViewById(R.id.cancel).setOnClickListener {
+            this.request?.cancel()
+            this.progress!!.progress = 0
+            println("cancelled")
+        }
     }
 
 
