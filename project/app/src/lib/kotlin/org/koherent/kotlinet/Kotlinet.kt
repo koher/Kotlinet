@@ -44,23 +44,11 @@ public fun download(method: Method, urlString: String, parameters: Map<String, A
 
     val out = BufferedOutputStream(FileOutputStream(temporaryDestination))
 
-    var exceptionOrNull: Exception? = null
     return request.stream { bytes ->
-        try {
-            out.write(bytes)
-        } catch (e: Exception) {
-            exceptionOrNull = e
-        }
+        out.write(bytes)
     }.response { url, urlConnection, bytes, exception ->
         out.close()
 
-        val e = exceptionOrNull
-        if (e != null) {
-            throw e
-        }
-        if (exception != null) {
-            throw exception
-        }
         if (!temporaryDestination.renameTo(destination)) {
             temporaryDestination.delete()
             throw IOException("Failed to rename a temporary file to " + destination.absolutePath)

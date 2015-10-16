@@ -4,7 +4,6 @@ import android.os.Handler
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLConnection
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.util.*
@@ -75,7 +74,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     urlConnection.connect()
 
                     try {
-                        totalBytesExpectedToRead = urlConnection.getHeaderField("Content-Length").toLong()
+                        totalBytesExpectedToRead = urlConnection.getHeaderField("Content-Length")?.toLong() ?: -1L
                     } catch(e: NumberFormatException) {
                     }
 
@@ -89,12 +88,6 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                         while (true) {
                             val length = it.read(buffer)
                             if (length == -1) {
-                                handler.post {
-                                    synchronized(this) {
-                                        callProgressHandlers(0L, totalBytesRead)
-                                        callStreamHandlers(ByteArray(0))
-                                    }
-                                }
                                 break
                             }
 
@@ -106,8 +99,12 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                             val totalBytesRead = this.totalBytesRead // this.totalBytesRead can be changed because of multithreading
                             handler.post {
                                 synchronized(this) {
-                                    callProgressHandlers(length.toLong(), totalBytesRead)
-                                    callStreamHandlers(readBytes)
+                                    try {
+                                        callProgressHandlers(length.toLong(), totalBytesRead)
+                                        callStreamHandlers(readBytes)
+                                    } catch(e: Exception) {
+                                        exception = e
+                                    }
                                 }
                             }
                         }
