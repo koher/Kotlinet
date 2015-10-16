@@ -49,7 +49,7 @@ public fun download(method: Method, urlString: String, parameters: Map<String, A
     }.response { url, urlConnection, bytes, exception ->
         out.close()
 
-        if (!temporaryDestination.renameTo(destination)) {
+        if (exception == null && !temporaryDestination.renameTo(destination)) {
             temporaryDestination.delete()
             throw IOException("Failed to rename a temporary file to " + destination.absolutePath)
         }
