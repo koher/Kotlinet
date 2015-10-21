@@ -203,6 +203,10 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     }
 
     public fun cancel() {
-        urlConnection?.disconnect()
+        urlConnection?.let { urlConnection ->
+            thread {
+                urlConnection.disconnect()
+            }
+        }
     }
 }
