@@ -96,11 +96,13 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                             out.write(buffer, 0, length)
 
                             val readBytes = buffer.copyOf(length)
-                            val totalBytesRead = this.totalBytesRead // this.totalBytesRead can be changed because of multithreading
+//                            val totalBytesRead = this.totalBytesRead // this.totalBytesRead can be changed because of multithreading
+                            val totalBytesRead = longArrayOf(this.totalBytesRead) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
                             handler.post {
                                 synchronized(this) {
                                     try {
-                                        callProgressHandlers(length.toLong(), totalBytesRead)
+//                                        callProgressHandlers(length.toLong(), totalBytesRead)
+                                        callProgressHandlers(length.toLong(), totalBytesRead[0]) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
                                         callStreamHandlers(readBytes)
                                     } catch(e: Exception) {
                                         exception = e
