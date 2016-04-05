@@ -29,12 +29,12 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     init {
         try {
             val parametersString = when (encoding) {
-                ParameterEncoding.URL -> parameters?.entrySet()?.fold("") { result, entry ->
-                    result + if (result.length() == 0) {
+                ParameterEncoding.URL -> parameters?.entries?.fold("") { result, entry ->
+                    result + if (result.length == 0) {
                         "?"
                     } else {
                         "&"
-                    } + URLEncoder.encode(entry.getKey(), Charsets.UTF_8.name()) + "=" + URLEncoder.encode(entry.getValue().toString(), Charsets.UTF_8.name())
+                    } + URLEncoder.encode(entry.key, Charsets.UTF_8.name()) + "=" + URLEncoder.encode(entry.value.toString(), Charsets.UTF_8.name())
                 } ?: ""
             }
 
@@ -55,7 +55,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
             urlConnection.requestMethod = method.rawValue
 
-            headers?.entrySet()?.forEach { urlConnection.setRequestProperty(it.getKey(), it.getValue()) }
+            headers?.entries?.forEach { urlConnection.setRequestProperty(it.key, it.value) }
 
             when (method) {
                 Method.POST -> {
