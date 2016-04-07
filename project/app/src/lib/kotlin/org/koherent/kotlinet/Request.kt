@@ -26,6 +26,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
     private val out: ByteArrayOutputStream = ByteArrayOutputStream()
 
+    private var canceled = false
+
     init {
         try {
             val parametersString = when (encoding) {
@@ -54,6 +56,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             this.urlConnection = urlConnection
 
             urlConnection.requestMethod = method.rawValue
+            urlConnection.setRequestProperty("Connection", "close")
 
             headers?.entries?.forEach { urlConnection.setRequestProperty(it.key, it.value) }
 
@@ -69,6 +72,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             }
 
             val handler = Handler()
+
             thread {
                 try {
                     urlConnection.connect()
@@ -86,6 +90,9 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     BufferedInputStream(urlConnection.inputStream, bufferLength).use {
                         val buffer = ByteArray(bufferLength)
                         while (true) {
+                            if (canceled) {
+                                urlConnection.disconnect()
+                            }
                             val length = it.read(buffer)
                             if (length == -1) {
                                 break
@@ -205,10 +212,6 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     }
 
     public fun cancel() {
-        urlConnection?.let { urlConnection ->
-            thread {
-                urlConnection.disconnect()
-            }
-        }
+        canceled = true
     }
 }
