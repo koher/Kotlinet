@@ -1,6 +1,7 @@
 package org.koherent.kotlinet
 
 import android.os.Handler
+import android.os.Looper
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -83,6 +84,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     } else {
                         totalBytesExpectedToRead.toInt()
                     })
+
                     BufferedInputStream(urlConnection.inputStream, bufferLength).use {
                         val buffer = ByteArray(bufferLength)
                         while (true) {
@@ -205,9 +207,10 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     }
 
     public fun cancel() {
-        urlConnection?.let { urlConnection ->
+        urlConnection?.let { urlConn ->
             thread {
-                urlConnection.disconnect()
+                val isMain = Looper.myLooper() ==Looper.getMainLooper()
+                urlConn.disconnect()
             }
         }
     }
