@@ -56,6 +56,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             this.urlConnection = urlConnection
 
             urlConnection.requestMethod = method.rawValue
+            urlConnection.setRequestProperty("Connection", "close")
 
             headers?.entries?.forEach { urlConnection.setRequestProperty(it.key, it.value) }
 
