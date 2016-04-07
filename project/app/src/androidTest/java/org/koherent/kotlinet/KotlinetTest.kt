@@ -3,6 +3,8 @@ package org.koherent.kotlinet
 import android.test.ActivityInstrumentationTestCase2
 import android.test.RenamingDelegatingContext
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
