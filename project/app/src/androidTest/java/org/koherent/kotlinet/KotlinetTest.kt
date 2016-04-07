@@ -30,7 +30,7 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
         try {
             signal.await(5L, TimeUnit.SECONDS)
         } catch(e: InterruptedException) {
-            fail(e.getMessage())
+            fail(e.message)
             e.printStackTrace()
         }
 
@@ -62,7 +62,7 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
             signal.await(30L, TimeUnit.SECONDS)
         } catch(e: InterruptedException) {
             destination.delete()
-            fail(e.getMessage())
+            fail(e.message)
             e.printStackTrace()
         }
 
@@ -91,7 +91,7 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
         try {
             signal.await(5L, TimeUnit.SECONDS)
         } catch(e: InterruptedException) {
-            fail(e.getMessage())
+            fail(e.message)
             e.printStackTrace()
         }
 
@@ -99,10 +99,10 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
     }
 
     private fun assertBytes(expected: ByteArray, actual: ByteArray) {
-        assertEquals(expected.size(), actual.size(), "Different size")
+        assertEquals(expected.size, actual.size, "Different size")
 
-        for (i in 0..(Math.min(expected.size(), actual.size()) - 1)) {
-            assertEquals(expected[i], actual[i], "At <$i> / <${expected.size()}>")
+        for (i in 0..(Math.min(expected.size, actual.size) - 1)) {
+            assertEquals(expected[i], actual[i], "At <$i> / <${expected.size}>")
         }
     }
 }
