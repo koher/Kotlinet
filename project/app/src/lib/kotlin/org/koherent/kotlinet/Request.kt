@@ -26,6 +26,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
     private val out: ByteArrayOutputStream = ByteArrayOutputStream()
 
+    private var cancelled = false
+
     init {
         try {
             val parametersString = when (encoding) {
@@ -54,7 +56,6 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             this.urlConnection = urlConnection
 
             urlConnection.requestMethod = method.rawValue
-            urlConnection.setRequestProperty("Connection", "close")
 
             headers?.entries?.forEach { urlConnection.setRequestProperty(it.key, it.value) }
 
@@ -73,13 +74,10 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
             thread {
                 try {
-                    synchronized(this.urlConnection!!) {
-                        urlConnection.connect()
-                    }
+                    urlConnection.connect()
+
                     try {
-                        synchronized(this.urlConnection!!) {
-                            totalBytesExpectedToRead = urlConnection.getHeaderField("Content-Length")?.toLong() ?: -1L
-                        }
+                        totalBytesExpectedToRead = urlConnection.getHeaderField("Content-Length")?.toLong() ?: -1L
                     } catch(e: NumberFormatException) {
                     }
 
@@ -91,10 +89,10 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     BufferedInputStream(urlConnection.inputStream, bufferLength).use {
                         val buffer = ByteArray(bufferLength)
                         while (true) {
-                            var length: Int = -1
-                            synchronized(this.urlConnection!!) {
-                                length = it.read(buffer)
+                            if(cancelled){
+                                urlConnection.disconnect()
                             }
+                            val length = it.read(buffer)
                             if (length == -1) {
                                 break
                             }
@@ -213,10 +211,6 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     }
 
     public fun cancel() {
-        thread {
-            synchronized(urlConnection!!) {
-                urlConnection!!.disconnect()
-            }
-        }
+        cancelled = true
     }
 }
