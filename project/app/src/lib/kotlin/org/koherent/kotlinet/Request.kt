@@ -1,6 +1,7 @@
 package org.koherent.kotlinet
 
 import android.os.Handler
+import android.os.Looper
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -25,6 +26,8 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     private var completionHandlers: MutableList<(URL?, HttpURLConnection?, ByteArray?, Exception?) -> Unit> = ArrayList()
 
     private val out: ByteArrayOutputStream = ByteArrayOutputStream()
+
+    private var cancelled = false
 
     init {
         try {
@@ -69,6 +72,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
             }
 
             val handler = Handler()
+
             thread {
                 try {
                     urlConnection.connect()
@@ -83,9 +87,13 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     } else {
                         totalBytesExpectedToRead.toInt()
                     })
+
                     BufferedInputStream(urlConnection.inputStream, bufferLength).use {
                         val buffer = ByteArray(bufferLength)
                         while (true) {
+                            if(cancelled){
+                                urlConnection.disconnect()
+                            }
                             val length = it.read(buffer)
                             if (length == -1) {
                                 break
@@ -205,10 +213,6 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     }
 
     public fun cancel() {
-        urlConnection?.let { urlConnection ->
-            thread {
-                urlConnection.disconnect()
-            }
-        }
+        cancelled = true
     }
 }

@@ -3,9 +3,13 @@ package org.koherent.kotlinet
 import android.test.ActivityInstrumentationTestCase2
 import android.test.RenamingDelegatingContext
 import java.io.File
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivity::class.java) {
     public fun testBasic() {
@@ -95,10 +99,10 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
     }
 
     private fun assertBytes(expected: ByteArray, actual: ByteArray) {
-        assertEquals(expected.size, actual.size)
+        assertEquals(expected.size, actual.size, "Different size")
 
         for (i in 0..(Math.min(expected.size, actual.size) - 1)) {
-            assertEquals(expected[i], actual[i])
+            assertEquals(expected[i], actual[i], "At <$i> / <${expected.size}>")
         }
     }
 }
