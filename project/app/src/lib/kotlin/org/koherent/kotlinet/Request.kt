@@ -26,7 +26,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
 
     private val out: ByteArrayOutputStream = ByteArrayOutputStream()
 
-    private var cancelled = false
+    private var canceled = false
 
     init {
         try {
@@ -90,7 +90,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
                     BufferedInputStream(urlConnection.inputStream, bufferLength).use {
                         val buffer = ByteArray(bufferLength)
                         while (true) {
-                            if(cancelled){
+                            if (canceled) {
                                 urlConnection.disconnect()
                             }
                             val length = it.read(buffer)
@@ -212,6 +212,6 @@ public class Request(val method: Method, val urlString: String, val parameters: 
     }
 
     public fun cancel() {
-        cancelled = true
+        canceled = true
     }
 }
