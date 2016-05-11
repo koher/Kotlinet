@@ -5,10 +5,9 @@ import android.test.RenamingDelegatingContext
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertEquals
 
-public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivity::class.java) {
-    public fun testBasic() {
+class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivity::class.java) {
+    fun testBasic() {
         val signal = CountDownLatch(1)
 
         var result: String? = null
@@ -33,7 +32,7 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
         assertEquals("ABCDEFG\n", result)
     }
 
-    public fun testDownload() {
+    fun testDownload() {
         val context = RenamingDelegatingContext(activity, "__kotlinet__")
 
         val signal = CountDownLatch(1)
@@ -72,7 +71,7 @@ public class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainA
         destination.delete()
     }
 
-    public fun testCancel(){
+    fun testCancel(){
         val signal = CountDownLatch(1)
 
         var result: ByteArray? = null

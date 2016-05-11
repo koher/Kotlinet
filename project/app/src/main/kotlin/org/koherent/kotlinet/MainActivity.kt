@@ -6,7 +6,7 @@ import android.view.Menu
 import android.view.MenuItem
 
 
-public class MainActivity : ActionBarActivity() {
+class MainActivity : ActionBarActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

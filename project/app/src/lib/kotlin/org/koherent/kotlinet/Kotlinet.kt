@@ -5,7 +5,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-public enum class Method(val rawValue: String) {
+enum class Method(val rawValue: String) {
     OPTIONS("OPTIONS"),
     GET("GET"),
     HEAD("HEAD"),
@@ -17,27 +17,27 @@ public enum class Method(val rawValue: String) {
     CONNECT("CONNECT")
 }
 
-public enum class ParameterEncoding {
+enum class ParameterEncoding {
     URL
 }
 
-public fun request(method: Method, urlString: String, parameters: Map<String, Any>? = null, encoding: ParameterEncoding = ParameterEncoding.URL, headers: Map<String, String>? = null): Request {
+fun request(method: Method, urlString: String, parameters: Map<String, Any>? = null, encoding: ParameterEncoding = ParameterEncoding.URL, headers: Map<String, String>? = null): Request {
     return Request(method, urlString, parameters, encoding, headers)
 }
 
-public fun download(method: Method, urlString: String, destination: File): Request {
+fun download(method: Method, urlString: String, destination: File): Request {
     return download(method, urlString, null, destination)
 }
 
-public fun download(method: Method, urlString: String, parameters: Map<String, Any>?, destination: File): Request {
+fun download(method: Method, urlString: String, parameters: Map<String, Any>?, destination: File): Request {
     return download(method, urlString, parameters, ParameterEncoding.URL, destination)
 }
 
-public fun download(method: Method, urlString: String, parameters: Map<String, Any>?, encoding: ParameterEncoding, destination: File): Request {
+fun download(method: Method, urlString: String, parameters: Map<String, Any>?, encoding: ParameterEncoding, destination: File): Request {
     return download(method, urlString, parameters, encoding, null, destination)
 }
 
-public fun download(method: Method, urlString: String, parameters: Map<String, Any>?, encoding: ParameterEncoding, headers: Map<String, String>?, destination: File): Request {
+fun download(method: Method, urlString: String, parameters: Map<String, Any>?, encoding: ParameterEncoding, headers: Map<String, String>?, destination: File): Request {
     val request = request(method, urlString, parameters, encoding, headers)
 
     val temporaryDestination = File.createTempFile("__kotlinet__", null, destination.parentFile)

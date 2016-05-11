@@ -9,7 +9,7 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.concurrent.thread
 
-public class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
+class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
     private var completed: Boolean = false
 
     private var url: URL? = null
@@ -133,7 +133,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         }
     }
 
-    public fun progress(progressHandler: ((Long, Long, Long) -> Unit)?): Request {
+    fun progress(progressHandler: ((Long, Long, Long) -> Unit)?): Request {
         if (progressHandler != null) {
             synchronized(this) {
                 if (completed) {
@@ -149,7 +149,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         return this
     }
 
-    public fun stream(streamHandler: ((ByteArray) -> Unit)?): Request {
+    fun stream(streamHandler: ((ByteArray) -> Unit)?): Request {
         if (streamHandler != null) {
             synchronized(this) {
                 if (completed) {
@@ -165,7 +165,7 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         return this
     }
 
-    public fun response(completionHandler: (URL?, HttpURLConnection?, ByteArray?, Exception?) -> Unit): Request {
+    fun response(completionHandler: (URL?, HttpURLConnection?, ByteArray?, Exception?) -> Unit): Request {
         synchronized(this) {
             if (completed) {
                 callCompletionHandler(completionHandler)
@@ -204,14 +204,14 @@ public class Request(val method: Method, val urlString: String, val parameters: 
         completed = true
     }
 
-    public fun responseString(charset: Charset? = null, completionHandler: (URL?, HttpURLConnection?, Result<String>) -> Unit): Request {
+    fun responseString(charset: Charset? = null, completionHandler: (URL?, HttpURLConnection?, Result<String>) -> Unit): Request {
         return response { url, urlConnection, bytes, exception ->
             val result = bytes?.let { String(it, charset ?: Charsets.UTF_8) }?.let { Result.Success(it) } ?: Result.Failure<String>(bytes, exception!!)
             completionHandler(url, urlConnection, result)
         }
     }
 
-    public fun cancel() {
+    fun cancel() {
         canceled = true
     }
 }
