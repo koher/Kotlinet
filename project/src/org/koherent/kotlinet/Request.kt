@@ -1,6 +1,5 @@
 package org.koherent.kotlinet
 
-import android.os.Handler
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -71,8 +70,6 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
                 }
             }
 
-            val handler = Handler()
-
             thread {
                 try {
                     urlConnection.connect()
@@ -105,15 +102,13 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
                             val readBytes = buffer.copyOf(length)
 //                            val totalBytesRead = this.totalBytesRead // this.totalBytesRead can be changed because of multithreading
                             val totalBytesRead = longArrayOf(this.totalBytesRead) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
-                            handler.post {
-                                synchronized(this) {
-                                    try {
-//                                        callProgressHandlers(length.toLong(), totalBytesRead)
-                                        callProgressHandlers(length.toLong(), totalBytesRead[0]) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
-                                        callStreamHandlers(readBytes)
-                                    } catch(e: Exception) {
-                                        exception = e
-                                    }
+                            synchronized(this) {
+                                try {
+//                                    callProgressHandlers(length.toLong(), totalBytesRead)
+                                    callProgressHandlers(length.toLong(), totalBytesRead[0]) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
+                                    callStreamHandlers(readBytes)
+                                } catch(e: Exception) {
+                                    exception = e
                                 }
                             }
                         }
@@ -122,9 +117,7 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
                 } catch(e: Exception) {
                     exception = e
                 } finally {
-                    handler.post {
-                        complete()
-                    }
+                    complete()
                 }
             }
         } catch(e: Exception) {

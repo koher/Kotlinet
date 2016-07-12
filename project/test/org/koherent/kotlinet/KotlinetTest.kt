@@ -1,25 +1,29 @@
 package org.koherent.kotlinet
 
-import android.test.ActivityInstrumentationTestCase2
-import android.test.RenamingDelegatingContext
-import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivity::class.java) {
+import org.junit.Test
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+
+class KotlinetTest {
+    @Rule @JvmField
+    val folder = TemporaryFolder()
+
+    @Test
     fun testBasic() {
         val signal = CountDownLatch(1)
 
         var result: String? = null
 
-        runTestOnUiThread {
-            request(Method.GET, "https://raw.githubusercontent.com/koher/Kotlinet/master/test-resources/basic.txt").response { url, urlConnection, bytes, exception ->
-                if (bytes != null) {
-                    result = String(bytes, Charsets.UTF_8)
-                }
-
-                signal.countDown()
+        request(Method.GET, "https://raw.githubusercontent.com/koher/Kotlinet/master/test-resources/basic.txt").response { url, urlConnection, bytes, exception ->
+            if (bytes != null) {
+                result = String(bytes, Charsets.UTF_8)
             }
+
+            signal.countDown()
         }
 
         try {
@@ -32,25 +36,21 @@ class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivity
         assertEquals("ABCDEFG\n", result)
     }
 
+    @Test
     fun testDownload() {
-        val context = RenamingDelegatingContext(activity, "__kotlinet__")
-
         val signal = CountDownLatch(1)
 
-        val destination = File(context.filesDir, "master.zip")
-        destination.delete()
+        val destination = folder.newFile("master.zip")
 
         var result: ByteArray? = null
 
-        runTestOnUiThread {
-            try {
-                download(Method.GET, "https://github.com/koher/Kotlinet/archive/master.zip", destination).response { url, urlConnection, bytes, exception ->
-                    result = bytes
-                    signal.countDown()
-                }
-            } catch(e: Exception) {
+        try {
+            download(Method.GET, "https://github.com/koher/Kotlinet/archive/master.zip", destination).response { url, urlConnection, bytes, exception ->
+                result = bytes
                 signal.countDown()
             }
+        } catch(e: Exception) {
+            signal.countDown()
         }
 
         try {
@@ -67,21 +67,18 @@ class KotlinetTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivity
         } else {
             fail()
         }
-
-        destination.delete()
     }
 
+    @Test
     fun testCancel(){
         val signal = CountDownLatch(1)
 
         var result: ByteArray? = null
 
-        runTestOnUiThread {
-            request(Method.GET, "https://github.com/android/platform_frameworks_base/archive/master.zip").response { url, urlConnection, bytes, exception ->
-                result = bytes
-                signal.countDown()
-            }.cancel()
-        }
+        request(Method.GET, "https://github.com/android/platform_frameworks_base/archive/master.zip").response { url, urlConnection, bytes, exception ->
+            result = bytes
+            signal.countDown()
+        }.cancel()
 
         try {
             signal.await(5L, TimeUnit.SECONDS)
