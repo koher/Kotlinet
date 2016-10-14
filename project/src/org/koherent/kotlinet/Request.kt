@@ -8,7 +8,7 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.concurrent.thread
 
-class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
+class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?, val maxBytesOnMemory: Int) {
     private var completed: Boolean = false
 
     private var url: URL? = null
@@ -97,7 +97,9 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
 
                             totalBytesRead += length
 
-                            out.write(buffer, 0, length)
+                            if (totalBytesRead <= maxBytesOnMemory) {
+                                out.write(buffer, 0, length)
+                            }
 
                             val readBytes = buffer.copyOf(length)
 //                            val totalBytesRead = this.totalBytesRead // this.totalBytesRead can be changed because of multithreading
@@ -113,7 +115,9 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
                             }
                         }
                     }
-                    bytes = out.toByteArray()
+                    if (totalBytesRead <= maxBytesOnMemory) {
+                        bytes = out.toByteArray()
+                    }
                 } catch(e: Exception) {
                     exception = e
                 } finally {
@@ -146,10 +150,16 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
         if (streamHandler != null) {
             synchronized(this) {
                 if (completed) {
-                    callStreamHandler(streamHandler, bytes!!)
+                    val bytes = this.bytes
+                    if (bytes == null) {
+                        throw IOException("Cannot stream data ($totalBytesRead bytes) which has already streamed exceeding `maxBytesOnMemory` ($maxBytesOnMemory bytes).")
+                    }
+                    callStreamHandler(streamHandler, bytes)
                 } else {
-                    if (totalBytesRead > 0) {
+                    if (0 < totalBytesRead && totalBytesRead <= maxBytesOnMemory) {
                         callStreamHandler(streamHandler, out.toByteArray())
+                    } else if (totalBytesRead > maxBytesOnMemory) {
+                        throw IOException("Cannot stream data ($totalBytesRead bytes) which has already streamed exceeding `maxBytesOnMemory` ($maxBytesOnMemory bytes).")
                     }
                     streamHandlers.add(streamHandler)
                 }
