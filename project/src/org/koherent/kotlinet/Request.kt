@@ -38,7 +38,7 @@ class Request(val method: Method,
             val parametersString = when (encoding) {
                 ParameterEncoding.URL -> parameters?.entries?.fold("") { result, entry ->
                     result + if (result.length == 0) {
-                        "?"
+                        ""
                     } else {
                         "&"
                     } + URLEncoder.encode(entry.key, Charsets.UTF_8.name()) + "=" + URLEncoder.encode(entry.value.toString(), Charsets.UTF_8.name())
@@ -46,7 +46,7 @@ class Request(val method: Method,
             }
 
             val urlStringWithParameters = when (method) {
-                Method.GET, Method.HEAD -> urlString + parametersString
+                Method.GET, Method.HEAD -> urlString + "?" + parametersString
                 else -> urlString
             }
 
