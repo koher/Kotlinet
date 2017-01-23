@@ -46,7 +46,7 @@ class Request(val method: Method,
             }
 
             val urlStringWithParameters = when (method) {
-                Method.GET, Method.HEAD -> urlString + (if(parametersString.isEmpty()) "" else "?" + parametersString)
+                Method.GET, Method.HEAD -> urlString + (if (parametersString.isEmpty()) "" else "?" + parametersString)
                 else -> urlString
             }
 
