@@ -8,7 +8,13 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.concurrent.thread
 
-class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?, val maxBytesOnMemory: Int) {
+class Request(val method: Method,
+              val urlString: String,
+              val parameters: Map<String, Any>?,
+              val encoding: ParameterEncoding,
+              val headers: Map<String, String>?,
+              val maxBytesOnMemory: Int) {
+
     private var completed: Boolean = false
 
     private var url: URL? = null
