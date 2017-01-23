@@ -18,13 +18,14 @@ class KotlinetTest {
 
         var result: String? = null
 
-        request(Method.GET, "https://raw.githubusercontent.com/koher/Kotlinet/master/test-resources/basic.txt").response { url, urlConnection, bytes, exception ->
-            if (bytes != null) {
-                result = String(bytes, Charsets.UTF_8)
-            }
+        request(Method.GET, "https://raw.githubusercontent.com/koher/Kotlinet/master/test-resources/basic.txt")
+                .response { url, urlConnection, bytes, exception ->
+                    if (bytes != null) {
+                        result = String(bytes, Charsets.UTF_8)
+                    }
 
-            signal.countDown()
-        }
+                    signal.countDown()
+                }
 
         try {
             signal.await(5L, TimeUnit.SECONDS)
