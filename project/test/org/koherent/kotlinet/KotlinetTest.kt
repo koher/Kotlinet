@@ -18,13 +18,14 @@ class KotlinetTest {
 
         var result: String? = null
 
-        request(Method.GET, "https://raw.githubusercontent.com/koher/Kotlinet/master/test-resources/basic.txt").response { url, urlConnection, bytes, exception ->
-            if (bytes != null) {
-                result = String(bytes, Charsets.UTF_8)
-            }
+        request(Method.GET, "https://raw.githubusercontent.com/koher/Kotlinet/master/test-resources/basic.txt")
+                .response { url, urlConnection, bytes, exception ->
+                    if (bytes != null) {
+                        result = String(bytes, Charsets.UTF_8)
+                    }
 
-            signal.countDown()
-        }
+                    signal.countDown()
+                }
 
         try {
             signal.await(5L, TimeUnit.SECONDS)
@@ -88,6 +89,32 @@ class KotlinetTest {
         }
 
         assertNull(result)
+    }
+
+    @Test
+    fun testPost() {
+        val signal = CountDownLatch(1)
+        val req = request(Method.POST, "http://posttestserver.com/post.php",
+                parameters = mapOf("hoge" to "hogehoge"),
+                headers = mapOf("Authorization" to "Bearer: hogehoge"))
+
+        var result: String? = null
+        req.response { url, httpURLConnection, bytes, exception ->
+            if (bytes != null) {
+                result = String(bytes, Charsets.UTF_8)
+            }
+
+            signal.countDown()
+        }
+
+        try {
+            signal.await(5L, TimeUnit.SECONDS)
+        } catch(e: InterruptedException) {
+            fail(e.message)
+            e.printStackTrace()
+        }
+
+        println(result)
     }
 
     private fun assertBytes(expected: ByteArray, actual: ByteArray) {
