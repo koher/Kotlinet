@@ -59,19 +59,18 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
 
             headers?.entries?.forEach { urlConnection.setRequestProperty(it.key, it.value) }
 
-            when (method) {
-                Method.POST -> {
-                    urlConnection.doOutput = true
-                    BufferedWriter(OutputStreamWriter(urlConnection.outputStream, "UTF-8")).use {
-                        it.write(parametersString)
-                    }
-                }
-                else -> {
-                }
-            }
-
             thread {
                 try {
+                    when (method) {
+                        Method.POST -> {
+                            urlConnection.doOutput = true
+                            BufferedWriter(OutputStreamWriter(urlConnection.outputStream, "UTF-8")).use {
+                                it.write(parametersString)
+                            }
+                        }
+                        else -> {
+                        }
+                    }
                     urlConnection.connect()
 
                     try {
