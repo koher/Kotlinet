@@ -1,6 +1,5 @@
 package org.koherent.kotlinet
 
-import android.os.Handler
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -9,7 +8,13 @@ import java.nio.charset.Charset
 import java.util.*
 import kotlin.concurrent.thread
 
-class Request(val method: Method, val urlString: String, val parameters: Map<String, Any>?, val encoding: ParameterEncoding, val headers: Map<String, String>?) {
+class Request(val method: Method,
+              val urlString: String,
+              val parameters: Map<String, Any>?,
+              val encoding: ParameterEncoding,
+              val headers: Map<String, String>?,
+              val maxBytesOnMemory: Int) {
+
     private var completed: Boolean = false
 
     private var url: URL? = null
@@ -32,8 +37,8 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
         try {
             val parametersString = when (encoding) {
                 ParameterEncoding.URL -> parameters?.entries?.fold("") { result, entry ->
-                    result + if (result.length == 0) {
-                        "?"
+                    result + if (result.isEmpty()) {
+                        ""
                     } else {
                         "&"
                     } + URLEncoder.encode(entry.key, Charsets.UTF_8.name()) + "=" + URLEncoder.encode(entry.value.toString(), Charsets.UTF_8.name())
@@ -41,7 +46,7 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
             }
 
             val urlStringWithParameters = when (method) {
-                Method.GET, Method.HEAD -> urlString + parametersString
+                Method.GET, Method.HEAD -> urlString + (if (parametersString.isEmpty()) "" else "?" + parametersString)
                 else -> urlString
             }
 
@@ -60,21 +65,18 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
 
             headers?.entries?.forEach { urlConnection.setRequestProperty(it.key, it.value) }
 
-            when (method) {
-                Method.POST -> {
-                    urlConnection.doOutput = true
-                    BufferedWriter(OutputStreamWriter(urlConnection.outputStream, "UTF-8")).use {
-                        it.write(parametersString)
-                    }
-                }
-                else -> {
-                }
-            }
-
-            val handler = Handler()
-
             thread {
                 try {
+                    when (method) {
+                        Method.POST -> {
+                            urlConnection.doOutput = true
+                            BufferedWriter(OutputStreamWriter(urlConnection.outputStream, "UTF-8")).use {
+                                it.write(parametersString)
+                            }
+                        }
+                        else -> {
+                        }
+                    }
                     urlConnection.connect()
 
                     try {
@@ -100,31 +102,31 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
 
                             totalBytesRead += length
 
-                            out.write(buffer, 0, length)
+                            if (totalBytesRead <= maxBytesOnMemory) {
+                                out.write(buffer, 0, length)
+                            }
 
                             val readBytes = buffer.copyOf(length)
 //                            val totalBytesRead = this.totalBytesRead // this.totalBytesRead can be changed because of multithreading
                             val totalBytesRead = longArrayOf(this.totalBytesRead) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
-                            handler.post {
-                                synchronized(this) {
-                                    try {
-//                                        callProgressHandlers(length.toLong(), totalBytesRead)
-                                        callProgressHandlers(length.toLong(), totalBytesRead[0]) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
-                                        callStreamHandlers(readBytes)
-                                    } catch(e: Exception) {
-                                        exception = e
-                                    }
+                            synchronized(this) {
+                                try {
+//                                    callProgressHandlers(length.toLong(), totalBytesRead)
+                                    callProgressHandlers(length.toLong(), totalBytesRead[0]) // workaround to avoid "Error:Execution failed for task ':app:dexDebug'."
+                                    callStreamHandlers(readBytes)
+                                } catch(e: Exception) {
+                                    exception = e
                                 }
                             }
                         }
                     }
-                    bytes = out.toByteArray()
+                    if (totalBytesRead <= maxBytesOnMemory) {
+                        bytes = out.toByteArray()
+                    }
                 } catch(e: Exception) {
                     exception = e
                 } finally {
-                    handler.post {
-                        complete()
-                    }
+                    complete()
                 }
             }
         } catch(e: Exception) {
@@ -153,10 +155,16 @@ class Request(val method: Method, val urlString: String, val parameters: Map<Str
         if (streamHandler != null) {
             synchronized(this) {
                 if (completed) {
-                    callStreamHandler(streamHandler, bytes!!)
+                    val bytes = this.bytes
+                    if (bytes == null) {
+                        throw IOException("Cannot stream data ($totalBytesRead bytes) which has already streamed exceeding `maxBytesOnMemory` ($maxBytesOnMemory bytes).")
+                    }
+                    callStreamHandler(streamHandler, bytes)
                 } else {
-                    if (totalBytesRead > 0) {
+                    if (0 < totalBytesRead && totalBytesRead <= maxBytesOnMemory) {
                         callStreamHandler(streamHandler, out.toByteArray())
+                    } else if (totalBytesRead > maxBytesOnMemory) {
+                        throw IOException("Cannot stream data ($totalBytesRead bytes) which has already streamed exceeding `maxBytesOnMemory` ($maxBytesOnMemory bytes).")
                     }
                     streamHandlers.add(streamHandler)
                 }
