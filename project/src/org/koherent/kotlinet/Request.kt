@@ -37,7 +37,7 @@ class Request(val method: Method,
         try {
             val parametersString = when (encoding) {
                 ParameterEncoding.URL -> parameters?.entries?.fold("") { result, entry ->
-                    result + if (result.length == 0) {
+                    result + if (result.isEmpty()) {
                         ""
                     } else {
                         "&"
